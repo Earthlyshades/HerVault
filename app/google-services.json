@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "916444899152",
+    "project_id": "hervault-620d7",
+    "storage_bucket": "hervault-620d7.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:916444899152:android:b9ade445f4301d5dd86e55",
+        "android_client_info": {
+          "package_name": "com.earthlyapps.hervault"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA_qjw2Kbxyx2ynaRcyNroraRPPooORtHs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

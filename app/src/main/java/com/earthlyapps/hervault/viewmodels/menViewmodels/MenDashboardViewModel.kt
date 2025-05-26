@@ -1,9 +1,12 @@
 package com.earthlyapps.hervault.viewmodels.menViewmodels
 
 import android.util.Log
+import android.widget.Toast
+import androidx.compose.runtime.remember
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.earthlyapps.hervault.models.CycleData
+import com.earthlyapps.hervault.models.LadiesNeeds
 import com.earthlyapps.hervault.models.Symptom
 import com.earthlyapps.hervault.models.User
 import com.google.firebase.auth.FirebaseAuth
@@ -20,7 +23,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
-class MenViewModel : ViewModel() {
+class MenDashboardViewModel : ViewModel() {
     // Firebase KTX instances
     private val auth: FirebaseAuth = Firebase.auth
     private val database = Firebase.database("https://hervault-620d7-default-rtdb.europe-west1.firebasedatabase.app/")
@@ -41,8 +44,12 @@ class MenViewModel : ViewModel() {
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
+    private val _ladiesNeeds = MutableStateFlow<LadiesNeeds?>(null)
+    val ladiesNeeds: StateFlow<LadiesNeeds?> = _ladiesNeeds.asStateFlow()
+
     init {
         loadPartnerData()
+        loadLadiesNeeds(userId = auth.currentUser?.uid ?: "")
     }
 
     internal fun loadPartnerData() {
@@ -112,6 +119,19 @@ class MenViewModel : ViewModel() {
                 override fun onCancelled(error: DatabaseError) {
                     _error.value = "Failed to load cycles: ${error.message}"
                     Log.e("MenViewModel", "Cycles listener cancelled", error.toException())
+                }
+            })
+    }
+
+    private fun loadLadiesNeeds(userId: String){
+        database.getReference("LadiesNeeds/${userId}")
+            .addValueEventListener(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    _ladiesNeeds.value = snapshot.getValue<LadiesNeeds>()
+                }
+                override fun onCancelled(error: DatabaseError) {
+                    _error.value = "Failed to load ladies needs: ${error.message}"
+                    Log.e("MenViewModel", "Ladies needs listener cancelled", error.toException())
                 }
             })
     }

@@ -88,7 +88,7 @@ fun LadiesDashboardScreen(
     var intensity by remember { mutableIntStateOf(3) }
     var selectedDate by remember { mutableStateOf(LocalDate.now().toString()) }
 
-    val men by dashboardViewModel.menData.collectAsState()
+    val menData by dashboardViewModel.menData.collectAsState()
     var showSharingDialog by remember { mutableStateOf(false) }
     var shareCycle by remember { mutableStateOf(true) }
     var shareSymptoms by remember { mutableStateOf(true) }
@@ -242,12 +242,62 @@ fun LadiesDashboardScreen(
                     }
                 }
 
+
+                var title by remember { mutableStateOf("") }
+                var message by remember { mutableStateOf("") }
+                var urgency by remember { mutableStateOf((1..3).random()) }
+
+                Card {
+                    Column (Modifier.padding(16.dp)) {
+                        OutlinedTextField(
+                            value = title,
+                            onValueChange = { title = it },
+                            label = { Text("Title of your need") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        OutlinedTextField(
+                            value = message,
+                            onValueChange = { message = it },
+                            label = { Text("Message") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        OutlinedTextField(
+                            value = urgency.toString(),
+                            onValueChange = { urgency = it.toIntOrNull() ?: 1 },
+                            label = { Text("Urgency") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Button(onClick = {
+                            dashboardViewModel.updateLadiesNeeds(title, message, urgency, context, menData?.uid.toString())
+                            title = ""
+                            message = ""
+                            urgency = (1..3).random()
+                        }) {
+                            Text("Submit")
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
                 Card {
                     Row (modifier = Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                         Column {
                             Text("Partner Settings", style = MaterialTheme.typography.titleMedium)
 
-                            men?.let {
+                            menData?.let {
                                 Text("Linked with: ${it.name}", style = MaterialTheme.typography.bodyMedium)
                             } ?: Text("No partner linked", style = MaterialTheme.typography.bodyMedium)
 

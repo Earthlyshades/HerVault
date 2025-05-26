@@ -1,7 +1,11 @@
 package com.earthlyapps.hervault.viewmodels.ladiesViewmodels
 
+import android.content.Context
 import android.util.Log
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.ViewModel
+import com.earthlyapps.hervault.models.LadiesNeeds
 import com.earthlyapps.hervault.models.Symptom
 import com.earthlyapps.hervault.models.SymptomType
 import com.earthlyapps.hervault.models.User
@@ -24,7 +28,7 @@ class LadiesDashboardViewModel : ViewModel() {
     private val _symptoms = MutableStateFlow<List<Symptom>>(emptyList())
     val symptoms: StateFlow<List<Symptom>> = _symptoms
 
-    private val _menData = MutableStateFlow<User?>(null) // Renamed from _partnerData
+    private val _menData = MutableStateFlow<User?>(null)
     val menData: StateFlow<User?> = _menData
 
     init {
@@ -46,7 +50,7 @@ class LadiesDashboardViewModel : ViewModel() {
         }
     }
 
-    private fun loadMenData() { // Renamed from loadPartnerData
+    private fun loadMenData() {
         currentUser.value?.linkedPartnerId?.let { menId ->
             database.getReference("Users/$menId").addValueEventListener(object : ValueEventListener {
                 override fun onDataChange(snapshot: DataSnapshot) {
@@ -65,7 +69,6 @@ class LadiesDashboardViewModel : ViewModel() {
             return
         }
 
-        // Get current user data first
         database.reference.child("Users").child(userId).get()
             .addOnSuccessListener { userSnapshot ->
                 val user = userSnapshot.getValue(User::class.java) ?: run {
@@ -81,13 +84,11 @@ class LadiesDashboardViewModel : ViewModel() {
                     timestamp = System.currentTimeMillis()
                 )
 
-                // Write to owner's symptoms
                 database.reference.child("symptoms").child(userId).push()
                     .setValue(symptom)
                     .addOnSuccessListener {
                         _symptoms.value = _symptoms.value + symptom
 
-                        // Share with partner if enabled
                         if (user.shareSymptoms && user.linkedPartnerId != null) {
                             database.reference.child("partnerSymptoms")
                                 .child(user.linkedPartnerId)
@@ -136,5 +137,27 @@ class LadiesDashboardViewModel : ViewModel() {
             )
             database.reference.updateChildren(updates)
         }
+    }
+
+    fun updateLadiesNeeds(title: String, message: String, urgency: Int, context: Context, partnerId: String) {
+
+        val ladiesNeeds = LadiesNeeds(
+            title = title,
+            message = message,
+            urgency = urgency
+        )
+
+        database.reference.child("LadiesNeeds/$partnerId").removeValue()
+
+        database.reference.child("LadiesNeeds/$partnerId").setValue(ladiesNeeds)
+            .addOnSuccessListener {
+                Log.d("LadiesNeeds", "Ladies needs added successfully")
+                Toast.makeText(context, "Your Message has been sent successfully", Toast.LENGTH_SHORT).show()
+            }
+            .addOnFailureListener { e ->
+                Log.e("LadiesNeeds", "Failed to add ladies needs", e)
+                Toast.makeText(context, "Error: $e", Toast.LENGTH_SHORT).show()
+            }
+
     }
 }

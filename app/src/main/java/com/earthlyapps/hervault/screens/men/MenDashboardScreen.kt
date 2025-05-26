@@ -19,10 +19,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -33,6 +35,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -46,19 +49,45 @@ import androidx.navigation.NavHostController
 import com.earthlyapps.hervault.models.CycleData
 import com.earthlyapps.hervault.models.Symptom
 import com.earthlyapps.hervault.models.SymptomType
-import com.earthlyapps.hervault.viewmodels.menViewmodels.MenViewModel
+import com.earthlyapps.hervault.viewmodels.NotificationViewModel
+import com.earthlyapps.hervault.viewmodels.menViewmodels.MenDashboardViewModel
+import kotlinx.coroutines.delay
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun MenDashboardScreen(navController: NavHostController) {
-    val menViewModel: MenViewModel = viewModel()
-    val partnerSymptoms by menViewModel.partnerSymptoms.collectAsState()
-    val partnerCycles by menViewModel.partnerCycles.collectAsState()
-    val partnerInfo by menViewModel.partnerInfo.collectAsState()
-    val loading by menViewModel.loading.collectAsState()
-    val error by menViewModel.error.collectAsState()
+    val menDashboardViewModel: MenDashboardViewModel = viewModel()
+    val notificationViewModel: NotificationViewModel = viewModel()
+    val notification by notificationViewModel.currentNotification.collectAsState()
+    val partnerSymptoms by menDashboardViewModel.partnerSymptoms.collectAsState()
+    val partnerCycles by menDashboardViewModel.partnerCycles.collectAsState()
+    val partnerInfo by menDashboardViewModel.partnerInfo.collectAsState()
+    val ladiesNeeds by menDashboardViewModel.ladiesNeeds.collectAsState()
+    val loading by menDashboardViewModel.loading.collectAsState()
+    val error by menDashboardViewModel.error.collectAsState()
+
+    notification?.let { notif ->
+        AlertDialog(
+            onDismissRequest = { notificationViewModel.clearNotification() },
+            title = { Text(notif.title) },
+            text = { Text(notif.message) },
+            confirmButton = {
+                Button(onClick = { notificationViewModel.clearNotification() }) {
+                    Text("OK")
+                }
+            }
+        )
+    }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            notificationViewModel.showRandomNotification()
+            delay(24 * 60 * 60 * 1000) // 24 hours
+            notificationViewModel.showRandomNotification()
+        }
+    }
 
     if (loading) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -72,7 +101,7 @@ fun MenDashboardScreen(navController: NavHostController) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Icon(Icons.Default.Error, contentDescription = "Error")
                 Text(text = error!!)
-                Button(onClick = { menViewModel.loadPartnerData() }) {
+                Button(onClick = { menDashboardViewModel.loadPartnerData() }) {
                     Text("Retry")
                 }
             }
@@ -113,13 +142,46 @@ fun MenDashboardScreen(navController: NavHostController) {
 
             item {
                 partnerInfo?.let { partner ->
-                    Column {
+                    Column (modifier = Modifier
+                        .padding(top = 16.dp)
+                        .fillMaxWidth()
+                        .background(color = Color.Magenta,shape = RoundedCornerShape(12.dp))
+                        .padding(16.dp)
+                    ) {
                         Text("Partner: ${partner.name}", color = Color.White)
                         Text("Cycle Sharing: ${partner.shareCycleData}", color = Color.White)
                         Text("Symptom Sharing: ${partner.shareSymptoms}", color = Color.White)
                     }
                 }
             }
+
+            item {
+                Column (
+                    modifier = Modifier
+                        .padding(top = 16.dp)
+                        .fillMaxWidth()
+                        .background(
+                        when (ladiesNeeds?.urgency) {
+                            3 -> Color(0xFFFF0000)
+                            2 -> Color(0xFFE50BCF)
+                            1 -> Color(0xFF8BC34A)
+                            else -> {Color.White}
+                        },shape = RoundedCornerShape(12.dp))
+                        .padding(16.dp), )
+                {
+                    Text(text = "Your Lady's Needs", style = MaterialTheme.typography.titleLarge, color = Color.White)
+
+                    Spacer(Modifier.height(8.dp))
+
+                    Text(text = ladiesNeeds?.title ?: "No Message", style = MaterialTheme.typography.titleMedium, color = Color.White)
+
+                    Spacer(Modifier.height(8.dp))
+
+                    Text(text = ladiesNeeds?.message ?: "Your lady has not sent any message", color = Color.White)
+                }
+            }
+
+            item {Spacer(Modifier.height(16.dp))}
 
             if (partnerInfo?.shareSymptoms == true) {
                 item {
@@ -128,10 +190,18 @@ fun MenDashboardScreen(navController: NavHostController) {
                         Text("No symptoms shared yet")
                     }
                 }
+                item {Spacer(Modifier.height(16.dp))}
                 items(partnerSymptoms) { symptom ->
                     SymptomRow(symptom)
                 }
+                item {
+                    Button(onClick = { notificationViewModel.showRandomNotification() }) {
+                        Text("Show Support Tip")
+                    }
+                }
             }
+
+            item {Spacer(Modifier.height(16.dp))}
 
             if (partnerInfo?.shareCycleData == true) {
                 item {
@@ -140,6 +210,7 @@ fun MenDashboardScreen(navController: NavHostController) {
                         Text("No cycles shared yet")
                     }
                 }
+                item {Spacer(Modifier.height(16.dp))}
                 items(partnerCycles) { cycle ->
                     CycleCard(cycle)
                 }
@@ -171,9 +242,9 @@ fun SymptomRow(symptom: Symptom) {
         Spacer(modifier = Modifier.width(12.dp))
 
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = symptom.type.name.replace("_", " ").uppercase(), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+            Text(text = symptom.type.name.replace("_", " ").uppercase(), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = Color(0xFFFAABDE))
 
-            Text(text = symptom.date, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+            Text(text = symptom.date, style = MaterialTheme.typography.bodySmall, color = Color(0xFFFAABDE))
         }
 
         Text(text = "★".repeat(symptom.intensity), color = Color(0xFFFFA000), style = MaterialTheme.typography.bodyLarge
